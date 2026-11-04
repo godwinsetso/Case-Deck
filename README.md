@@ -55,6 +55,11 @@ iOS cannot run an HTML file opened from Files or Mail, which is why it failed be
 - Content updates (new cases, modules, questions): sign a `.cdupdate` file in the Key Studio. Analysts install it from **About > Install update**. No reinstall needed.
 - New app builds: replace `app/src/main/assets/index.html` and `web/index.html` with the new build, raise `versionCode` and `versionName` in `app/build.gradle.kts`, change `VERSION` in `web/sw.js`, and rebuild.
 
-## Video lessons
+## Video lessons and sound
 
-Every module and CFE topic has a video lesson inside the app. Narration uses the phone's own offline text-to-speech voice (Android settings, then Accessibility or System, then Text-to-speech) and needs no internet or extra permission.
+Every module and CFE topic has a narrated video lesson inside the app, with a quiet instrumental soundtrack generated on the device (no audio files, no internet). Narration uses the phone's own offline text-to-speech voice (Android settings, then Accessibility or System, then Text-to-speech). Players have Voice and Music switches.
+
+## Navigation and difficulty
+
+Home, Cases, Learn, Videos and About tabs sit at the top of every page, and at the bottom on phones. Analysts choose Trainee, Analyst or Examiner level from Home or the level chip in the top bar.
+
