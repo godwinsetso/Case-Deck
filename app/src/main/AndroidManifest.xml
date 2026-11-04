@@ -2,6 +2,13 @@
 <!-- Case Deck: fully offline. No network, storage, camera or location permissions are requested. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Lets the app find the phone's text-to-speech engine for lesson narration (Android 11+). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

@@ -1,6 +1,6 @@
 # CASE DECK 1.0 · ANDROID APP AND IPHONE/IPAD WEB APP
 
-Created by Godwin Setsoafia for the e-Crime Bureau Financial Crimes and Investigations practice.
+Created by Godwin Setsoafia.
 
 This project builds two things from one folder:
 
@@ -54,3 +54,7 @@ iOS cannot run an HTML file opened from Files or Mail, which is why it failed be
 
 - Content updates (new cases, modules, questions): sign a `.cdupdate` file in the Key Studio. Analysts install it from **About > Install update**. No reinstall needed.
 - New app builds: replace `app/src/main/assets/index.html` and `web/index.html` with the new build, raise `versionCode` and `versionName` in `app/build.gradle.kts`, change `VERSION` in `web/sw.js`, and rebuild.
+
+## Video lessons
+
+Every module and CFE topic has a video lesson inside the app. Narration uses the phone's own offline text-to-speech voice (Android settings, then Accessibility or System, then Text-to-speech) and needs no internet or extra permission.

@@ -7,11 +7,11 @@ val ksProps = Properties().apply { val f = rootProject.file("keystore.properties
 fun ks(name: String, env: String): String? = ksProps.getProperty(name) ?: System.getenv(env)
 
 android {
-    namespace = "com.ecrimebureau.casedeck"
+    namespace = "com.godwinsetsoafia.casedeck"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.ecrimebureau.casedeck"
+        applicationId = "com.godwinsetsoafia.casedeck"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

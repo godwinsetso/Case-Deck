@@ -1,7 +1,7 @@
 {
   "name": "Case Deck",
   "short_name": "Case Deck",
-  "description": "Fraud investigation training by Godwin Setsoafia, e-Crime Bureau.",
+  "description": "Fraud investigation training by Godwin Setsoafia.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

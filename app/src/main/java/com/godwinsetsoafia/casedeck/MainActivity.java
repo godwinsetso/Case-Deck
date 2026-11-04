@@ -1,11 +1,14 @@
-package com.ecrimebureau.casedeck;
+package com.godwinsetsoafia.casedeck;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -16,10 +19,15 @@ import android.webkit.WebViewClient;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import org.json.JSONObject;
+
+import java.util.Locale;
+
 /**
  * Case Deck 1.0 by Godwin Setsoafia.
  * Loads the bundled app from assets over a virtual HTTPS origin, fully offline.
  * No external navigation, no file or content access, screenshots blocked.
+ * Video lesson narration uses the device's own offline text-to-speech engine.
  */
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
@@ -30,6 +38,8 @@ public class MainActivity extends Activity {
 
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
+    private TextToSpeech tts;
+    private volatile boolean ttsReady = false;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -79,6 +89,20 @@ public class MainActivity extends Activity {
             }
         });
 
+        tts = new TextToSpeech(this, status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                int r = tts.setLanguage(Locale.UK);
+                if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) tts.setLanguage(Locale.US);
+                ttsReady = true;
+            }
+        });
+        tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+            @Override public void onStart(String id) { }
+            @Override public void onDone(String id) { ttsDone(id); }
+            @Override public void onError(String id) { ttsDone(id); }
+        });
+        web.addJavascriptInterface(new TtsBridge(), "CaseDeckTTS");
+
         setContentView(web);
         if (state != null) web.restoreState(state); else web.loadUrl(START);
     }
@@ -91,6 +115,35 @@ public class MainActivity extends Activity {
             fileCallback.onReceiveValue(r);
             fileCallback = null;
         }
+    }
+
+    private void ttsDone(final String id) {
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.__cdTtsDone&&window.__cdTtsDone(" + JSONObject.quote(id) + ")", null); });
+    }
+
+    /** Narration bridge for the video lessons. Only the bundled app can load in this WebView. */
+    public class TtsBridge {
+        @JavascriptInterface
+        public boolean ready() { return ttsReady; }
+
+        @JavascriptInterface
+        public void speak(String text, float rate, String id) {
+            if (!ttsReady || text == null) { ttsDone(id); return; }
+            tts.setSpeechRate(Math.max(0.5f, Math.min(2f, rate)));
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, id);
+        }
+
+        @JavascriptInterface
+        public void stop() { if (tts != null) tts.stop(); }
+    }
+
+    @Override
+    protected void onPause() { super.onPause(); if (tts != null) tts.stop(); }
+
+    @Override
+    protected void onDestroy() {
+        if (tts != null) { tts.stop(); tts.shutdown(); }
+        super.onDestroy();
     }
 
     @Override
