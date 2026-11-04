@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.CaseDeck" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">#0C736C</item>
+        <item name="android:colorAccent">#A86400</item>
+        <item name="android:statusBarColor">#0C736C</item>
+        <item name="android:navigationBarColor">#0B1312</item>
+        <item name="android:windowBackground">#EDF1F0</item>
+    </style>
+</resources>
