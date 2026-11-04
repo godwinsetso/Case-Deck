@@ -15,7 +15,7 @@ jobs:
     name: Signed Android APK
     runs-on: ubuntu-latest
     env:
-      HAS_KEYSTORE: ${{ secrets.CASEDECK_KEYSTORE_BASE64 != '' }}
+      HAS_KEYSTORE: ${{ secrets.CASEDECK_KEYSTORE_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -34,25 +34,27 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Restore release keystore from secrets
+      - name: Restore release keystore
         if: env.HAS_KEYSTORE == 'true'
         env:
-          KS: ${{ secrets.CASEDECK_KEYSTORE_BASE64 }}
           PW: ${{ secrets.CASEDECK_KEYSTORE_PASSWORD }}
           AL: ${{ secrets.CASEDECK_KEY_ALIAS }}
         run: |
-          # Keep only base64 characters, so stray spaces or Windows line endings from copy and paste do no harm
-          printf '%s' "$KS" | tr -cd 'A-Za-z0-9+/=' | base64 -d > "$RUNNER_TEMP/casedeck-release.jks" || { echo "::error::CASEDECK_KEYSTORE_BASE64 is not valid. Paste the whole of casedeck-release.jks.base64.txt and nothing else."; exit 1; }
-          echo "Keystore restored: $(wc -c < "$RUNNER_TEMP/casedeck-release.jks") bytes"
-          PW="$(printf '%s' "$PW" | tr -d '\r\n')"; AL="$(printf '%s' "$AL" | tr -d '\r\n ')"
-          keytool -list -keystore "$RUNNER_TEMP/casedeck-release.jks" -storepass "$PW" -alias "$AL" > /dev/null || { echo "::error::The keystore opened but the password or alias does not match. Check CASEDECK_KEYSTORE_PASSWORD (the text after storePassword=) and CASEDECK_KEY_ALIAS (casedeck)."; exit 1; }
-          echo "Keystore, password and alias verified."
+          # The keystore is stored encrypted in signing/ and unlocked with the keystore password secret.
+          PW="$(printf '%s' "$PW" | tr -d '\r\n' | sed 's/^ *//;s/ *$//')"
+          AL="$(printf '%s' "${AL:-casedeck}" | tr -d '\r\n ')"; [ -n "$AL" ] || AL=casedeck
+          echo "Password secret length: ${#PW} characters (expected 20). Alias: $AL"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in signing/casedeck-release.jks.enc -out "$RUNNER_TEMP/casedeck-release.jks" -pass env:PW || { echo "::error::Could not unlock the keystore. CASEDECK_KEYSTORE_PASSWORD must be exactly the text after storePassword= in keystore.properties (20 characters, nothing else)."; exit 1; }
+          export PW
+          keytool -list -keystore "$RUNNER_TEMP/casedeck-release.jks" -storepass:env PW -alias "$AL" > /dev/null || { echo "::error::Keystore unlocked but alias '$AL' was not found. Set CASEDECK_KEY_ALIAS to casedeck."; exit 1; }
+          echo "Keystore unlocked and verified."
           echo "CASEDECK_KEYSTORE_PATH=$RUNNER_TEMP/casedeck-release.jks" >> "$GITHUB_ENV"
+          echo "CASEDECK_KEY_ALIAS_CLEAN=$AL" >> "$GITHUB_ENV"
       - name: Build release APK
         env:
           CASEDECK_KEYSTORE_PASSWORD: ${{ secrets.CASEDECK_KEYSTORE_PASSWORD }}
-          CASEDECK_KEY_ALIAS: ${{ secrets.CASEDECK_KEY_ALIAS }}
-          CASEDECK_KEY_PASSWORD: ${{ secrets.CASEDECK_KEY_PASSWORD }}
+          CASEDECK_KEY_ALIAS: ${{ secrets.CASEDECK_KEY_ALIAS || 'casedeck' }}
+          CASEDECK_KEY_PASSWORD: ${{ secrets.CASEDECK_KEYSTORE_PASSWORD }}
         run: gradle assembleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
