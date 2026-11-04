@@ -4,7 +4,7 @@ plugins { id("com.android.application") }
 
 // Release signing: reads keystore.properties (local builds) or environment variables (GitHub Actions).
 val ksProps = Properties().apply { val f = rootProject.file("keystore.properties"); if (f.exists()) f.inputStream().use { load(it) } }
-fun ks(name: String, env: String): String? = ksProps.getProperty(name) ?: System.getenv(env)
+fun ks(name: String, env: String): String? = (ksProps.getProperty(name) ?: System.getenv(env))?.trim()
 
 android {
     namespace = "com.godwinsetsoafia.casedeck"
