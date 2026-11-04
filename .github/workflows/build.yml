@@ -41,7 +41,16 @@ jobs:
           AL: ${{ secrets.CASEDECK_KEY_ALIAS }}
         run: |
           # The keystore is stored encrypted in signing/ and unlocked with the keystore password secret.
-          PW="$(printf '%s' "$PW" | tr -d '\r\n' | sed 's/^ *//;s/ *$//')"
+          RAW="$PW"
+          # Accept either the bare password or text copied from keystore.properties (storePassword=...)
+          if printf '%s' "$RAW" | grep -q 'storePassword='; then
+            PW="$(printf '%s\n' "$RAW" | tr -d '\r' | sed -n 's/.*storePassword=\([^[:space:]]*\).*/\1/p' | head -1)"
+            echo "Found storePassword= in the secret; using only its value."
+          else
+            PW="$(printf '%s' "$RAW" | tr -d '\r\n' | sed 's/^ *//;s/ *$//')"
+          fi
+          echo "::add-mask::$PW"
+          echo "Secret has $(printf '%s\n' "$RAW" | wc -l) line(s); contains '=': $(printf '%s' "$RAW" | grep -q '=' && echo yes || echo no)"
           AL="$(printf '%s' "${AL:-casedeck}" | tr -d '\r\n ')"; [ -n "$AL" ] || AL=casedeck
           echo "Password secret length: ${#PW} characters (expected 20). Alias: $AL"
           openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in signing/casedeck-release.jks.enc -out "$RUNNER_TEMP/casedeck-release.jks" -pass env:PW || { echo "::error::Could not unlock the keystore. CASEDECK_KEYSTORE_PASSWORD must be exactly the text after storePassword= in keystore.properties (20 characters, nothing else)."; exit 1; }
@@ -49,12 +58,8 @@ jobs:
           keytool -list -keystore "$RUNNER_TEMP/casedeck-release.jks" -storepass:env PW -alias "$AL" > /dev/null || { echo "::error::Keystore unlocked but alias '$AL' was not found. Set CASEDECK_KEY_ALIAS to casedeck."; exit 1; }
           echo "Keystore unlocked and verified."
           echo "CASEDECK_KEYSTORE_PATH=$RUNNER_TEMP/casedeck-release.jks" >> "$GITHUB_ENV"
-          echo "CASEDECK_KEY_ALIAS_CLEAN=$AL" >> "$GITHUB_ENV"
+          { echo "CASEDECK_KEYSTORE_PASSWORD=$PW"; echo "CASEDECK_KEY_PASSWORD=$PW"; echo "CASEDECK_KEY_ALIAS=$AL"; } >> "$GITHUB_ENV"
       - name: Build release APK
-        env:
-          CASEDECK_KEYSTORE_PASSWORD: ${{ secrets.CASEDECK_KEYSTORE_PASSWORD }}
-          CASEDECK_KEY_ALIAS: ${{ secrets.CASEDECK_KEY_ALIAS || 'casedeck' }}
-          CASEDECK_KEY_PASSWORD: ${{ secrets.CASEDECK_KEYSTORE_PASSWORD }}
         run: gradle assembleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
